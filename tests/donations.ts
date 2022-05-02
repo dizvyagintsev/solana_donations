@@ -12,7 +12,7 @@ describe("donations", () => {
 
   const program = anchor.workspace.Donations as Program<Donations>;
 
-  it("Is initialized!", async () => {
+  it("full flow", async () => {
     const [walletPDA, _] = await PublicKey
         .findProgramAddress(
             [
@@ -22,27 +22,36 @@ describe("donations", () => {
             program.programId
         );
 
-    let tx = await program.methods.createFundraising(provider.wallet.publicKey).accounts({
+    await program.methods.createFundraising(provider.wallet.publicKey).accounts({
       user: provider.wallet.publicKey,
       wallet: walletPDA,
     }).rpc();
 
-    let userBalanceBeforeTX = await provider.connection.getBalance(provider.wallet.publicKey);
-    console.log('user balance before donation', userBalanceBeforeTX);
-    let programWalletBalanceBeforeTX = await provider.connection.getBalance(walletPDA);
-    console.log('wallet balance before donation', programWalletBalanceBeforeTX);
+    let userBalanceBeforeDonation = await provider.connection.getBalance(provider.wallet.publicKey);
+    // console.log('userBalanceBeforeDonation', userBalanceBeforeDonation);
+    let programWalletBalanceBeforeDonation = await provider.connection.getBalance(walletPDA);
+    // console.log('programWalletBalanceBeforeDonation', programWalletBalanceBeforeDonation);
 
-    tx = await program.methods.donate(new anchor.BN(LAMPORTS_PER_SOL)).accounts({
+    await program.methods.donate(new anchor.BN(LAMPORTS_PER_SOL)).accounts({
         user: provider.wallet.publicKey,
         wallet: walletPDA,
     }).rpc();
 
-   let userBalanceAfterTX = await provider.connection.getBalance(provider.wallet.publicKey);
-   console.log('user balance after donation', userBalanceAfterTX);
-   let programWalletBalanceAfterTX = await provider.connection.getBalance(walletPDA);
-   console.log('wallet balance after donation', programWalletBalanceAfterTX);
+   let userBalanceAfterDonation = await provider.connection.getBalance(provider.wallet.publicKey);
+   let programWalletBalanceAfterDonation = await provider.connection.getBalance(walletPDA);
 
-   assert.ok((userBalanceBeforeTX - userBalanceAfterTX) === LAMPORTS_PER_SOL);
-   assert.ok((programWalletBalanceAfterTX - programWalletBalanceBeforeTX) === LAMPORTS_PER_SOL);
+   assert.ok((userBalanceBeforeDonation - userBalanceAfterDonation) === LAMPORTS_PER_SOL);
+   assert.ok((programWalletBalanceAfterDonation - programWalletBalanceBeforeDonation) === LAMPORTS_PER_SOL);
+
+   await program.methods.withdraw(new anchor.BN(LAMPORTS_PER_SOL)).accounts({
+      authority: provider.wallet.publicKey,
+      wallet: walletPDA,
+   }).rpc();
+
+  let userBalanceAfterWithdraw = await provider.connection.getBalance(provider.wallet.publicKey);
+  let programWalletBalanceAfterWithdraw = await provider.connection.getBalance(walletPDA);
+
+  assert.ok((userBalanceAfterWithdraw - userBalanceAfterDonation) == LAMPORTS_PER_SOL);
+  assert.ok((programWalletBalanceAfterDonation - programWalletBalanceAfterWithdraw) == LAMPORTS_PER_SOL);
   });
 });

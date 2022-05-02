@@ -30,6 +30,15 @@ pub mod donations {
         )?;
         Ok(())
     }
+
+    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+        // TODO: check is owner
+
+        **ctx.accounts.wallet.to_account_info().try_borrow_mut_lamports()? -= amount;
+        **ctx.accounts.authority.to_account_info().try_borrow_mut_lamports()? += amount;
+
+        Ok(())
+    }
 }
 
 #[account]
@@ -57,3 +66,14 @@ pub struct Donate<'info> {
     pub wallet: Account<'info, Wallet>,
 }
 
+#[derive(Accounts)]
+pub struct Withdraw<'info> {
+    pub system_program: Program<'info, System>,
+    #[account(
+        mut,
+        seeds=[b"wallet", authority.key().as_ref()],
+        bump = wallet.bump,
+    )]
+    pub wallet: Account<'info, Wallet>,
+    pub authority: Signer<'info>,
+}
