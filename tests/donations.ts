@@ -1,7 +1,7 @@
 import * as anchor from "@project-serum/anchor";
-import { Program } from "@project-serum/anchor";
+import { Program, AnchorError } from "@project-serum/anchor";
 import { Donations } from "../target/types/donations";
-import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { PublicKey, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
 import {assert} from "chai";
 
 describe("donations", () => {
@@ -53,5 +53,24 @@ describe("donations", () => {
 
   assert.ok((userBalanceAfterWithdraw - userBalanceAfterDonation) == LAMPORTS_PER_SOL);
   assert.ok((programWalletBalanceAfterDonation - programWalletBalanceAfterWithdraw) == LAMPORTS_PER_SOL);
+
+  let keypair = Keypair.generate();
+  let raised = false;
+
+  // test that only owner can withdraw
+  try {
+      await program.methods.withdraw(new anchor.BN(LAMPORTS_PER_SOL)).accounts({
+          authority: keypair.publicKey,
+          wallet: walletPDA,
+      }).signers([keypair]).rpc().catch();
+  } catch (e: unknown) {
+      assert.ok(e instanceof AnchorError)
+      raised = true;
+  }
+
+  assert.ok(raised == true);
+
+
+
   });
 });
